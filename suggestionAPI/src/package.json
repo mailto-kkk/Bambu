@@ -1,0 +1,69 @@
+{
+    "name": "suggestion_api",
+    "version": "1.0.0",
+    "description": "SUGGESTION API",
+    "author": "kUMARESAN",
+    "main": "index.js",
+    "scripts": {
+        "unitTest": "grunt unitTest",
+        "coverage": "grunt coverage",
+        "start": "node index.js",
+        "startSuggestionServer": "forever start index.js",
+        "stopSuggestionServer": "forever stop index.js",
+        "restartSuggestionServer": "forever restart index.js"
+    },
+    "engines": {
+        "node": "8.4.0"
+    },
+    "dependencies": {
+        "async": "2.5.0",
+        "csv-parse": "3.0.0",
+        "express": "4.13.4",
+        "forever": "0.15.3",
+        "geolib": "^2.0.24",
+        "http-status": "1.0.1",
+        "jsonschema": "1.1.1",
+        "kraken-js": "2.1.0",
+        "lodash": "4.17.4",
+        "log4js": "2.0.1",
+        "nconf": "0.8.4",
+        "node-gyp": "3.6.2",
+        "object-unset": "1.0.1",
+        "q": "1.5.0",
+        "stack-trace": "0.0.10"
+    },
+    "devDependencies": {
+        "babel-cli": "6.24.1",
+        "chai": "3.5.0",
+        "grunt": "0.4.5",
+        "grunt-cli": "1.2.0",
+        "grunt-config-dir": "0.3.2",
+        "grunt-contrib-clean": "0.5.0",
+        "grunt-contrib-jshint": "0.10.0",
+        "grunt-contrib-less": "0.9.0",
+        "grunt-contrib-requirejs": "0.4.4",
+        "grunt-copy-to": "0.0.10",
+        "grunt-dustjs": "1.4.0",
+        "grunt-localizr": "0.1.4",
+        "grunt-mocha-cli": "1.14.0",
+        "grunt-mocha-istanbul": "4.0.2",
+        "grunt-mocha-test": "0.12.7",
+        "istanbul": "0.4.3",
+        "mocha": "2.2.5",
+        "should": "8.3.1",
+        "supertest": "0.9.2",
+        "superagent": "0.15.7",
+        "expect.js": "0.2.0",
+        "mocha-jshint": "2.3.1",
+        "sinon": "1.14.1",
+        "sinon-as-promised": "4.0.0",
+        "sinon-chai": "2.8.0"
+    },
+    "generator-kraken": {
+        "version": "1.1.1",
+        "template": "dustjs",
+        "css": "less",
+        "js": "requirejs",
+        "task": "grunt"
+    }
+}

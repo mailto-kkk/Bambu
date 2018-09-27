@@ -1,0 +1,54 @@
+{
+    "port": 8028,
+
+    "loggerConfig": {
+        "appenders": {
+            "console": { "type": "console" },
+            "dateFile": {
+                "type": "dateFile",
+                "filename": "logs/suggestion_api_common.log",
+                "pattern": "-yyyy-MM-dd",
+                "alwaysIncludePattern": false
+            }
+        },
+        "categories": {
+            "SUGGESTION_API": { "appenders": ["dateFile"], "level": "ALL" },
+            "default": { "appenders": ["console"], "level": "ALL" }
+        },
+        "printLineNumber": true
+    },
+    "middleware": {
+        "appsec": {
+            "module": {
+                "arguments": [
+                    {
+                        "csrf": false
+                    }
+                ]
+            }
+        },
+        "router": {
+            "module": {
+                "arguments": [
+                    {
+                        "directory": "path:./controllers"
+                    }
+                ]
+            }
+        },
+        "fileNotFound": {
+            "enabled": true,
+            "priority": 130,
+            "module": {
+                "name": "path:./middlewares/404"
+            }
+        },
+        "serverError": {
+            "enabled": true,
+            "priority": 140,
+            "module": {
+                "name": "path:./middlewares/500"
+            }
+        }
+    }
+}
