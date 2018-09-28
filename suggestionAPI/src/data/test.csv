@@ -1,5 +1,5 @@
-Id,name,age,latitude,longitude,monthlyIncome,experienced
-1,Kendra1,45,40.71667,19.56667,5000,FALSE
-2,Kendra2,40,40.71667,19.56667,6000,FALSE
-3,Kendra3,67,40.71667,19.56667,6200,FALSE
-4,Kendra4,68,40.71667,19.56667,7000,FALSE
+name,age,latitude,longitude,monthlyIncome,experienced
+Kendra1,45,40.71667,19.56667,5000,FALSE
+Kendra2,40,40.71667,45.56668,6000,FALSE
+Kendra3,67,40.71667,19.56667,6200,FALSE
+Kendra4,68,40.71667,19.56667,7000,FALSE
