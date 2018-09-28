@@ -15,8 +15,50 @@ var constants = require('./constants');
 var Q = require('q');
 var httpStatus = require('http-status');
 
+commonUtil.validateSuggestionGetRequest = function(req,res){
+    logger.msg('INFO', 'validateSuggestionGetRequest', '', '', 'validateSuggestionGetRequest', 'validateSuggestionGetRequest started');
+    var d = Q.defer();
+    var age=req.query.age;
+    var monthlyIncome=req.query.monthlyIncome;
+    var latitude=req.query.latitude;
+    var longitude=req.query.longitude;
+    var experienced=req.query.experienced;
+    if(age){
+        if(!isInt(age) || age<=0){
+            logger.msg('INFO', 'v1', '', '', 'GET ', 'Age is not a number');
+            return commonUtil.sendResponseWoBody(res, httpStatus.BAD_REQUEST);
+        }
+    }
+    if(monthlyIncome){
+        if(!isInt(monthlyIncome) || monthlyIncome<=0){
+            logger.msg('INFO', 'v1', '', '', 'GET ', 'monthlyIncome is not a number');
+            return commonUtil.sendResponseWoBody(res, httpStatus.BAD_REQUEST);
+        }
+    }
+    if(latitude && !longitude){
+        // Both Lat and Long has to come in pairs. or it is an error scenario
+        logger.msg('INFO', 'v1', '', '', 'GET ', 'Only latitude is present. so error condition');
+        return commonUtil.sendResponseWoBody(res, httpStatus.BAD_REQUEST);
+    }
+    if(!latitude && longitude){
+        // Both Lat and Long has to come in pairs. or it is an error scenario
+        logger.msg('INFO', 'v1', '', '', 'GET ', 'Only longitude is present. so error condition');
+        return commonUtil.sendResponseWoBody(res, httpStatus.BAD_REQUEST);
+    }
+    if(latitude && longitude){
+        if(isNaN(latitude) || isNaN(longitude)){
+            logger.msg('INFO', 'v1', '', '', 'GET ', 'latitude/longitude is not a number');
+            return commonUtil.sendResponseWoBody(res, httpStatus.BAD_REQUEST);
+        }
+    }
+    d.resolve(true);
 
+    return d.promise;
+};
 
+function isInt(value) {
+    return (parseFloat(value) == parseInt(value)) && !isNaN(value);
+}
 /**
  * Send response without body
  * @param res
