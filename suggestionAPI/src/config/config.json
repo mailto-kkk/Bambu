@@ -18,15 +18,6 @@
         "printLineNumber": true
     },
     "middleware": {
-        "appsec": {
-            "module": {
-                "arguments": [
-                    {
-                        "csrf": false
-                    }
-                ]
-            }
-        },
         "router": {
             "module": {
                 "arguments": [
@@ -34,20 +25,6 @@
                         "directory": "path:./controllers"
                     }
                 ]
-            }
-        },
-        "fileNotFound": {
-            "enabled": true,
-            "priority": 130,
-            "module": {
-                "name": "path:./middlewares/404"
-            }
-        },
-        "serverError": {
-            "enabled": true,
-            "priority": 140,
-            "module": {
-                "name": "path:./middlewares/500"
             }
         }
     }
