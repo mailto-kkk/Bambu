@@ -1,4 +1,5 @@
 {
+    "maxRecordsToDisplay":10,
     "graceAge": 10,
     "graceMonthlyIncome": 500,
     "graceMeters": 500,
