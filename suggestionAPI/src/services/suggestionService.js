@@ -49,11 +49,15 @@ suggestionService.getSuggestedData = async function (req,res) {
             longitude=parseFloat(req.query.longitude);
         }
 
-
+        var settingsConfig = require('nconf').file({file: 'config/settings.json'});
+        var maxRecordsToDisplay=settingsConfig.get('maxRecordsToDisplay');
         var parser = parse({columns: true,skip_empty_lines: true}, function(err, csvData){
         suggestionService.parseData(req,res,csvData,age,monthlyIncome,latitude,longitude,experienced)
             .then(function (finalData) {
                 logger.msg('INFO', 'v1', '', '', 'controllers', 'finalData ' + JSON.stringify(finalData));
+                //finalData = lodash.orderBy(finalData, ['score'],['asc']);
+                //finalData = lodash.sortBy(finalData, 'score');
+                finalData.length=maxRecordsToDisplay;
                 return commonUtil.sendResponse(res, httpStatus.OK,finalData);
             },function (err) {
                 logger.msg('ERROR', 'v1', '', '', 'controllers', 'Undefined error in controllers - ' + err.stack);
@@ -121,7 +125,7 @@ suggestionService.computeAgeSuggestion = function(age,iteratedData,graceAge,ageS
            if (ageDiff >=ageSuggestionData.lowerLimit && ageDiff<=ageSuggestionData.upperLimit) {
             logger.msg('INFO', 'computeAgeSuggestion', '', '', 'computeAgeSuggestion', "Age condition satisfied for "+ageSuggestionData.lowerLimit+" and "+ageSuggestionData.upperLimit+" for the diff "+ageDiff);
             iteratedData.score=ageSuggestionData.suggestionLevel;
-            iteratedData.searchField="age";
+            iteratedData.scoreAwardingField="age";
             finalData.push(iteratedData);
         }
         return ageData;
@@ -153,10 +157,10 @@ suggestionService.computeMonthlyIncomeAndExperiencedSuggestion = function(experi
             if(iteratedData.score){
                 // Already this record has some score(based on age criteria).
                 iteratedData.score=iteratedData.score+monthlyIncomeSuggestionData.suggestionLevel;
-                iteratedData.searchField="age & monthlyIncome";
+                iteratedData.scoreAwardingField="age & monthlyIncome";
             }else{
                 iteratedData.score=monthlyIncomeSuggestionData.suggestionLevel;
-                iteratedData.searchField="monthlyIncome";
+                iteratedData.scoreAwardingField="monthlyIncome";
                 finalData.push(iteratedData);
             }
             }
@@ -170,10 +174,10 @@ suggestionService.computeMonthlyIncomeAndExperiencedSuggestion = function(experi
         if(iteratedData.score){
             // Already this record has some score(based on prevoius criteria).
             iteratedData.score=iteratedData.score+experiencedFlagSuggestion;
-            iteratedData.searchField=iteratedData.searchField+" & experienced";
+            iteratedData.scoreAwardingField=iteratedData.scoreAwardingField+" & experienced";
         }else{
             iteratedData.score=experiencedFlagSuggestion;
-            iteratedData.searchField="experienced";
+            iteratedData.scoreAwardingField="experienced";
             finalData.push(iteratedData);
         }
     }
@@ -204,10 +208,10 @@ suggestionService.computeLatLongSuggestion = function(latitude,longitude,iterate
                     if(iteratedData.score){
                         // Already this record has some score(based on age or monthlyIncome criteria).
                         iteratedData.score=iteratedData.score+latLongSuggestionData.suggestionLevel;
-                        iteratedData.searchField=iteratedData.searchField+" & LatLong";
+                        iteratedData.scoreAwardingField=iteratedData.scoreAwardingField+" & LatLong";
                     }else{
                         iteratedData.score=latLongSuggestionData.suggestionLevel;
-                        iteratedData.searchField="LatLong";
+                        iteratedData.scoreAwardingField="LatLong";
 
                         finalData.push(iteratedData);
                         //console.log("data is added"+JSON.stringify(finalData));
@@ -235,10 +239,10 @@ suggestionService.computeExperiencedSuggestion = function(experienced,iteratedDa
         if(iteratedData.score){
             // Already this record has some score(based on prevoius criteria).
             iteratedData.score=iteratedData.score+experiencedFlagSuggestion;
-            iteratedData.searchField=iteratedData.searchField+" & experienced";
+            iteratedData.scoreAwardingField=iteratedData.scoreAwardingField+" & experienced";
         }else{
             iteratedData.score=experiencedFlagSuggestion;
-            iteratedData.searchField="experienced";
+            iteratedData.scoreAwardingField="experienced";
             finalData.push(iteratedData);
             logger.msg('INFO', 'computeExperiencedSuggestion', '', '', 'computeExperiencedSuggestion', 'expData is '+JSON.stringify(finalData));
         }
