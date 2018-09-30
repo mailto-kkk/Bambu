@@ -77,7 +77,7 @@ suggestionService.getSuggestedData = async function (req,res) {
 suggestionService.parseData =  async function(req,res,csvData,age,monthlyIncome,latitude,longitude,experienced){
     var d = Q.defer();
     var result = await suggestionService.reduceData(req,res,csvData,age,monthlyIncome,latitude,longitude,experienced);
-    logger.msg('INFO', 'v1', '', '', 'controllers', 'result'+JSON.stringify(result) );
+    //logger.msg('INFO', 'v1', '', '', 'controllers', 'result'+JSON.stringify(result) );
     d.resolve(result);
     return d.promise;
 };
