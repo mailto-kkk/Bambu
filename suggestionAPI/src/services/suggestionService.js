@@ -8,6 +8,7 @@ var fs = require('fs');
 var parse = require('csv-parse');
 var lodash = require('lodash');
 var geolib = require('geolib');
+var sort = require('fast-sort');
 
 //var Client = require('node-rest-client').Client;
 
@@ -24,7 +25,7 @@ suggestionService.getSuggestedData = async function (req,res) {
     var matchedRecords;
     var validationResult = await commonUtil.validateSuggestionGetRequest(req,res);
     if(validationResult){
-
+        logger.msg('INFO', 'v1', '', '', 'controllers', 'validation passed');
 
         // Getting the user inputs and store in some variables
         var age=req.query.age;
@@ -49,16 +50,20 @@ suggestionService.getSuggestedData = async function (req,res) {
             longitude=parseFloat(req.query.longitude);
         }
 
+        logger.msg('INFO', 'v1', '', '', 'controllers', 'started to parse');
         var settingsConfig = require('nconf').file({file: 'config/settings.json'});
         var maxRecordsToDisplay=settingsConfig.get('maxRecordsToDisplay');
         var parser = parse({columns: true,skip_empty_lines: true}, function(err, csvData){
+            //console.log("Lengrh::" + csvData.length);
         suggestionService.parseData(req,res,csvData,age,monthlyIncome,latitude,longitude,experienced)
-            .then(function (finalData) {
-                logger.msg('INFO', 'v1', '', '', 'controllers', 'finalData ' + JSON.stringify(finalData));
-                //finalData = lodash.orderBy(finalData, ['score'],['asc']);
-                //finalData = lodash.sortBy(finalData, 'score');
-                finalData.length=maxRecordsToDisplay;
-                return commonUtil.sendResponse(res, httpStatus.OK,finalData);
+            .then(function (tempData) {
+                //console.log("before "+JSON.stringify(tempData));
+                tempData=sort(tempData).desc(data => data.score);
+                if(tempData!=null && tempData.length>maxRecordsToDisplay){
+                    tempData.length=maxRecordsToDisplay;
+                }
+
+                return commonUtil.sendResponse(res, httpStatus.OK,tempData);
             },function (err) {
                 logger.msg('ERROR', 'v1', '', '', 'controllers', 'Undefined error in controllers - ' + err.stack);
                 return commonUtil.sendResponseWoBody(res, httpStatus.INTERNAL_SERVER_ERROR);
@@ -69,10 +74,16 @@ suggestionService.getSuggestedData = async function (req,res) {
     }
 };
 
-suggestionService.parseData = function(req,res,csvData,age,monthlyIncome,latitude,longitude,experienced){
+suggestionService.parseData =  async function(req,res,csvData,age,monthlyIncome,latitude,longitude,experienced){
     var d = Q.defer();
+    var result = await suggestionService.reduceData(req,res,csvData,age,monthlyIncome,latitude,longitude,experienced);
+    logger.msg('INFO', 'v1', '', '', 'controllers', 'result'+JSON.stringify(result) );
+    d.resolve(result);
+    return d.promise;
+};
+
+suggestionService.reduceData = function(req,res,csvData,age,monthlyIncome,latitude,longitude,experienced){
     var settingsConfig = require('nconf').file({file: 'config/settings.json'});
-    logger.msg('INFO', 'v1', '', '', 'controllers', 'Inside parseData method' );
     // below variables holds to define the range for the search criteria.
     // For ex, if the user supplied age as 45 and the graceAge is 5, then our system will fetch the records from 40 to 50
     var graceAge=settingsConfig.get('graceAge');
@@ -86,30 +97,30 @@ suggestionService.parseData = function(req,res,csvData,age,monthlyIncome,latitud
     var experiencedFlagSuggestion=settingsConfig.get('experiencedFlagSuggestion');
 
     var finalData = csvData.reduce((finalData, iteratedData) => {
+            logger.msg('INFO', 'suggestionService', '', '', 'suggestionService', 'Inside redice ' );
         iteratedData.age=parseInt(iteratedData.age);
-        iteratedData.monthlyIncome=parseInt(iteratedData.monthlyIncome);
+        iteratedData["monthly income"]=parseInt(iteratedData["monthly income"]);
         iteratedData.latitude=parseFloat(iteratedData.latitude);
         iteratedData.longitude=parseFloat(iteratedData.longitude);
         suggestionService.computeAgeSuggestion(age,iteratedData,graceAge,ageSuggestionMatrix,finalData)
             .then(function (finalData){
                 return suggestionService.computeMonthlyIncomeAndExperiencedSuggestion(experienced,experiencedFlagSuggestion,monthlyIncome,iteratedData,graceMonthlyIncome,monthlyIncomeSuggestionMatrix,finalData);
+                //return finalData;
             }).then(function (finalData){
                 return suggestionService.computeLatLongSuggestion(latitude,longitude,iteratedData,graceMeters,latLongSuggestionMatrixInMeters,finalData);
-            }).then(function (finalData) {
-                return finalData;
-            },function (err) {
-                logger.msg('ERROR', 'suggestionService', '', '', 'suggestionService', 'Undefined error in service - ' + err.stack);
-                return commonUtil.sendResponseWoBody(res, httpStatus.INTERNAL_SERVER_ERROR);
-            });
             return finalData;
+        }).then(function (finalData) {
+            return finalData;
+        },function (err) {
+            logger.msg('ERROR', 'suggestionService', '', '', 'suggestionService', 'Undefined error in service - ' + err.stack);
+            return commonUtil.sendResponseWoBody(res, httpStatus.INTERNAL_SERVER_ERROR);
+        });
+        return finalData;
     }, []);
-    d.resolve(finalData);
-
-    return d.promise;
+    return finalData;
 };
-
 suggestionService.computeAgeSuggestion = function(age,iteratedData,graceAge,ageSuggestionMatrix,finalData){
-    logger.msg('INFO', 'computeAgeSuggestion', '', '', 'computeAgeSuggestion', 'computeAgeSuggestion started');
+    //logger.msg('DEBUG', 'computeAgeSuggestion', '', '', 'computeAgeSuggestion', 'computeAgeSuggestion started');
     var d = Q.defer();
 
     // satisfies with the grace period
@@ -120,16 +131,16 @@ suggestionService.computeAgeSuggestion = function(age,iteratedData,graceAge,ageS
         }else{
             ageDiff=age-iteratedData.age;
         }
-        logger.msg('INFO', 'computeAgeSuggestion', '', '', 'computeAgeSuggestion', 'grace age is found for '+iteratedData.name+' with diff '+ageDiff);
+            //logger.msg('DEBUG', 'computeAgeSuggestion', '', '', 'computeAgeSuggestion', 'grace age is found for '+iteratedData.name+' with diff '+ageDiff);
         var ageData = ageSuggestionMatrix.reduce((ageData, ageSuggestionData) => {
-           if (ageDiff >=ageSuggestionData.lowerLimit && ageDiff<=ageSuggestionData.upperLimit) {
-            logger.msg('INFO', 'computeAgeSuggestion', '', '', 'computeAgeSuggestion', "Age condition satisfied for "+ageSuggestionData.lowerLimit+" and "+ageSuggestionData.upperLimit+" for the diff "+ageDiff);
-            iteratedData.score=ageSuggestionData.suggestionLevel;
-            iteratedData.scoreAwardingField="age";
-            finalData.push(iteratedData);
-        }
-        return ageData;
-    }, []);
+            if (ageDiff >=ageSuggestionData.lowerLimit && ageDiff<=ageSuggestionData.upperLimit) {
+                //logger.msg('DEBUG', 'computeAgeSuggestion', '', '', 'computeAgeSuggestion', "Age condition satisfied for "+ageSuggestionData.lowerLimit+" and "+ageSuggestionData.upperLimit+" for the diff "+ageDiff);
+                iteratedData.score=ageSuggestionData.suggestionLevel;
+                //iteratedData.scoreAwardingField="age";
+                finalData.push(iteratedData);
+            }
+            return ageData;
+        }, []);
 
     }
     d.resolve(finalData);
@@ -138,29 +149,29 @@ suggestionService.computeAgeSuggestion = function(age,iteratedData,graceAge,ageS
 };
 
 suggestionService.computeMonthlyIncomeAndExperiencedSuggestion = function(experienced,experiencedFlagSuggestion,monthlyIncome,iteratedData,graceMonthlyIncome,monthlyIncomeSuggestionMatrix,finalData){
-    logger.msg('INFO', 'computeMonthlyIncomeSuggestion', '', '', 'computeMonthlyIncomeSuggestion', 'computeMonthlyIncomeSuggestion started');
+    //logger.msg('DEBUG', 'computeMonthlyIncomeSuggestion', '', '', 'computeMonthlyIncomeSuggestion', 'computeMonthlyIncomeSuggestion started');
     var d = Q.defer();
 
-    if(monthlyIncome && iteratedData.monthlyIncome >= monthlyIncome-graceMonthlyIncome && iteratedData.monthlyIncome <= monthlyIncome+graceMonthlyIncome){
+    if(monthlyIncome && iteratedData["monthly income"] >= monthlyIncome-graceMonthlyIncome && iteratedData["monthly income"] <= monthlyIncome+graceMonthlyIncome){
 
         var monthlyIncomeDiff=0;
-        if(iteratedData.monthlyIncome>=monthlyIncome){
-            monthlyIncomeDiff=iteratedData.monthlyIncome-monthlyIncome;
+        if(iteratedData["monthly income"]>=monthlyIncome){
+            monthlyIncomeDiff=iteratedData["monthly income"]-monthlyIncome;
         }else{
-            monthlyIncomeDiff=monthlyIncome-iteratedData.monthlyIncome;
+            monthlyIncomeDiff=monthlyIncome-iteratedData["monthly income"];
         }
-        logger.msg('INFO', 'computeMonthlyIncomeSuggestion', '', '', 'computeMonthlyIncomeSuggestion', 'grace monthly Income is found for '
-                +iteratedData.name+' with diff '+monthlyIncomeDiff);
+        /*logger.msg('DEBUG', 'computeMonthlyIncomeSuggestion', '', '', 'computeMonthlyIncomeSuggestion', 'grace monthly Income is found for '
+                +iteratedData.name+' with diff '+monthlyIncomeDiff);*/
         var monthlyIncomeData = monthlyIncomeSuggestionMatrix.reduce((monthlyIncomeData, monthlyIncomeSuggestionData) => {
            if (monthlyIncomeDiff >=monthlyIncomeSuggestionData.lowerLimit && monthlyIncomeDiff<=monthlyIncomeSuggestionData.upperLimit) {
-            logger.msg('INFO', 'computeMonthlyIncomeSuggestion', '', '', 'computeMonthlyIncomeSuggestion', "monthlyIncome condition satisfied for "+monthlyIncomeSuggestionData.lowerLimit+" and "+monthlyIncomeSuggestionData.upperLimit+" for the diff "+monthlyIncomeDiff);
+            //logger.msg('DEBUG', 'computeMonthlyIncomeSuggestion', '', '', 'computeMonthlyIncomeSuggestion', "monthlyIncome condition satisfied for "+monthlyIncomeSuggestionData.lowerLimit+" and "+monthlyIncomeSuggestionData.upperLimit+" for the diff "+monthlyIncomeDiff);
             if(iteratedData.score){
                 // Already this record has some score(based on age criteria).
                 iteratedData.score=iteratedData.score+monthlyIncomeSuggestionData.suggestionLevel;
-                iteratedData.scoreAwardingField="age & monthlyIncome";
+                //iteratedData.scoreAwardingField="age & monthlyIncome";
             }else{
                 iteratedData.score=monthlyIncomeSuggestionData.suggestionLevel;
-                iteratedData.scoreAwardingField="monthlyIncome";
+                //iteratedData.scoreAwardingField="monthlyIncome";
                 finalData.push(iteratedData);
             }
             }
@@ -170,14 +181,14 @@ suggestionService.computeMonthlyIncomeAndExperiencedSuggestion = function(experi
 
 
     }
-    if(experienced && iteratedData.experienced == experienced ){
+    if(experienced && iteratedData.experienced.toUpperCase() == experienced.toUpperCase() ){
         if(iteratedData.score){
             // Already this record has some score(based on prevoius criteria).
             iteratedData.score=iteratedData.score+experiencedFlagSuggestion;
-            iteratedData.scoreAwardingField=iteratedData.scoreAwardingField+" & experienced";
+            //iteratedData.scoreAwardingField=iteratedData.scoreAwardingField+" & experienced";
         }else{
             iteratedData.score=experiencedFlagSuggestion;
-            iteratedData.scoreAwardingField="experienced";
+            //iteratedData.scoreAwardingField="experienced";
             finalData.push(iteratedData);
         }
     }
@@ -190,7 +201,7 @@ suggestionService.computeMonthlyIncomeAndExperiencedSuggestion = function(experi
 
 
 suggestionService.computeLatLongSuggestion = function(latitude,longitude,iteratedData,graceMeters,latLongSuggestionMatrixInMeters,finalData){
-    logger.msg('INFO', 'computeLatLongSuggestion', '', '', 'computeLatLongSuggestion', 'computeLatLongSuggestion started');
+    //logger.msg('INFO', 'computeLatLongSuggestion', '', '', 'computeLatLongSuggestion', 'computeLatLongSuggestion started');
     var d = Q.defer();
 
 
@@ -200,21 +211,19 @@ suggestionService.computeLatLongSuggestion = function(latitude,longitude,iterate
             {latitude: iteratedData.latitude, longitude:iteratedData.longitude}
         );
         if(diffInMeters<=graceMeters){
-            logger.msg('INFO', 'computeLatLongSuggestion', '', '', 'computeLatLongSuggestion', 'grace lat is found for '+iteratedData.name+' with diff '+diffInMeters);
+            //logger.msg('INFO', 'computeLatLongSuggestion', '', '', 'computeLatLongSuggestion', 'grace lat is found for '+iteratedData.name+' with diff '+diffInMeters);
             var latLongData = latLongSuggestionMatrixInMeters.reduce((latLongData, latLongSuggestionData) => {
                 if (diffInMeters >=latLongSuggestionData.lowerLimit && diffInMeters<=latLongSuggestionData.upperLimit) {
-                    logger.msg('INFO', 'computeLatLongSuggestion', '', '', 'computeLatLongSuggestion', "latLong condition satisfied for "+latLongSuggestionData.lowerLimit
-                        +" and "+latLongSuggestionData.upperLimit+" for the diff "+diffInMeters);
+                    /*logger.msg('INFO', 'computeLatLongSuggestion', '', '', 'computeLatLongSuggestion', "latLong condition satisfied for "+latLongSuggestionData.lowerLimit
+                        +" and "+latLongSuggestionData.upperLimit+" for the diff "+diffInMeters);*/
                     if(iteratedData.score){
                         // Already this record has some score(based on age or monthlyIncome criteria).
                         iteratedData.score=iteratedData.score+latLongSuggestionData.suggestionLevel;
-                        iteratedData.scoreAwardingField=iteratedData.scoreAwardingField+" & LatLong";
+                        //iteratedData.scoreAwardingField=iteratedData.scoreAwardingField+" & LatLong";
                     }else{
                         iteratedData.score=latLongSuggestionData.suggestionLevel;
-                        iteratedData.scoreAwardingField="LatLong";
-
+                        //iteratedData.scoreAwardingField="LatLong";
                         finalData.push(iteratedData);
-                        //console.log("data is added"+JSON.stringify(finalData));
                     }
                 }
 
@@ -229,28 +238,3 @@ suggestionService.computeLatLongSuggestion = function(latitude,longitude,iterate
     return d.promise;
 };
 
-suggestionService.computeExperiencedSuggestion = function(experienced,iteratedData,experiencedFlagSuggestion,finalData){
-    logger.msg('INFO', 'computeExperiencedSuggestion', '', '', 'computeExperiencedSuggestion', 'computeExperiencedSuggestion started');
-    var d = Q.defer();
-
-    if(experienced && iteratedData.experienced == experienced ){
-        logger.msg('INFO', 'computeExperiencedSuggestion', '', '', 'computeExperiencedSuggestion', 'Experienced flag is found for '
-                +iteratedData.name+" score is "+experiencedFlagSuggestion);
-        if(iteratedData.score){
-            // Already this record has some score(based on prevoius criteria).
-            iteratedData.score=iteratedData.score+experiencedFlagSuggestion;
-            iteratedData.scoreAwardingField=iteratedData.scoreAwardingField+" & experienced";
-        }else{
-            iteratedData.score=experiencedFlagSuggestion;
-            iteratedData.scoreAwardingField="experienced";
-            finalData.push(iteratedData);
-            logger.msg('INFO', 'computeExperiencedSuggestion', '', '', 'computeExperiencedSuggestion', 'expData is '+JSON.stringify(finalData));
-        }
-
-        d.resolve(finalData);
-    }else{
-        d.resolve(finalData);
-    }
-
-    return d.promise;
-};

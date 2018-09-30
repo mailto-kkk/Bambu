@@ -7,12 +7,12 @@
         {
             "lowerLimit": 0,
             "upperLimit": 1,
-            "suggestionLevel": 1
+            "suggestionLevel": 0.5
         },
         {
             "lowerLimit": 2,
             "upperLimit": 5,
-            "suggestionLevel": 0.5
+            "suggestionLevel": 0.3
         },
         {
             "lowerLimit": 6,
@@ -42,12 +42,12 @@
         {
             "lowerLimit": 0,
             "upperLimit": 100,
-            "suggestionLevel": 1
+            "suggestionLevel": 0.5
         },
         {
             "lowerLimit": 101,
             "upperLimit": 300,
-            "suggestionLevel": 0.5
+            "suggestionLevel": 0.3
         },
         {
             "lowerLimit": 301,

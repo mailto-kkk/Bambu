@@ -12,8 +12,8 @@
             }
         },
         "categories": {
-            "SUGGESTION_API": { "appenders": ["dateFile"], "level": "ALL" },
-            "default": { "appenders": ["console"], "level": "ALL" }
+            "SUGGESTION_API": { "appenders": ["dateFile"], "level": "INFO" },
+            "default": { "appenders": ["console"], "level": "INFO" }
         },
         "printLineNumber": true
     },
