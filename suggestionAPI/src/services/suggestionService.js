@@ -97,7 +97,7 @@ suggestionService.reduceData = function(req,res,csvData,age,monthlyIncome,latitu
     var experiencedFlagSuggestion=settingsConfig.get('experiencedFlagSuggestion');
 
     var finalData = csvData.reduce((finalData, iteratedData) => {
-            logger.msg('INFO', 'suggestionService', '', '', 'suggestionService', 'Inside redice ' );
+
         iteratedData.age=parseInt(iteratedData.age);
         iteratedData["monthly income"]=parseInt(iteratedData["monthly income"]);
         iteratedData.latitude=parseFloat(iteratedData.latitude);
@@ -122,9 +122,9 @@ suggestionService.reduceData = function(req,res,csvData,age,monthlyIncome,latitu
 suggestionService.computeAgeSuggestion = function(age,iteratedData,graceAge,ageSuggestionMatrix,finalData){
     //logger.msg('DEBUG', 'computeAgeSuggestion', '', '', 'computeAgeSuggestion', 'computeAgeSuggestion started');
     var d = Q.defer();
-
     // satisfies with the grace period
     if(age && iteratedData.age >= age-graceAge && iteratedData.age <= age+graceAge){
+
         var ageDiff=0;
         if(iteratedData.age>=age){
             ageDiff=iteratedData.age-age;
@@ -151,7 +151,6 @@ suggestionService.computeAgeSuggestion = function(age,iteratedData,graceAge,ageS
 suggestionService.computeMonthlyIncomeAndExperiencedSuggestion = function(experienced,experiencedFlagSuggestion,monthlyIncome,iteratedData,graceMonthlyIncome,monthlyIncomeSuggestionMatrix,finalData){
     //logger.msg('DEBUG', 'computeMonthlyIncomeSuggestion', '', '', 'computeMonthlyIncomeSuggestion', 'computeMonthlyIncomeSuggestion started');
     var d = Q.defer();
-
     if(monthlyIncome && iteratedData["monthly income"] >= monthlyIncome-graceMonthlyIncome && iteratedData["monthly income"] <= monthlyIncome+graceMonthlyIncome){
 
         var monthlyIncomeDiff=0;
@@ -165,15 +164,16 @@ suggestionService.computeMonthlyIncomeAndExperiencedSuggestion = function(experi
         var monthlyIncomeData = monthlyIncomeSuggestionMatrix.reduce((monthlyIncomeData, monthlyIncomeSuggestionData) => {
            if (monthlyIncomeDiff >=monthlyIncomeSuggestionData.lowerLimit && monthlyIncomeDiff<=monthlyIncomeSuggestionData.upperLimit) {
             //logger.msg('DEBUG', 'computeMonthlyIncomeSuggestion', '', '', 'computeMonthlyIncomeSuggestion', "monthlyIncome condition satisfied for "+monthlyIncomeSuggestionData.lowerLimit+" and "+monthlyIncomeSuggestionData.upperLimit+" for the diff "+monthlyIncomeDiff);
-            if(iteratedData.score){
-                // Already this record has some score(based on age criteria).
-                iteratedData.score=iteratedData.score+monthlyIncomeSuggestionData.suggestionLevel;
-                //iteratedData.scoreAwardingField="age & monthlyIncome";
-            }else{
-                iteratedData.score=monthlyIncomeSuggestionData.suggestionLevel;
-                //iteratedData.scoreAwardingField="monthlyIncome";
-                finalData.push(iteratedData);
-            }
+
+                if(iteratedData.score){
+                    // Already this record has some score(based on age criteria).
+                    iteratedData.score=iteratedData.score+monthlyIncomeSuggestionData.suggestionLevel;
+                    //iteratedData.scoreAwardingField="age & monthlyIncome";
+                }else{
+                    iteratedData.score=monthlyIncomeSuggestionData.suggestionLevel;
+                    //iteratedData.scoreAwardingField="monthlyIncome";
+                    finalData.push(iteratedData);
+                }
             }
 
         return monthlyIncomeData;
@@ -230,8 +230,11 @@ suggestionService.computeLatLongSuggestion = function(latitude,longitude,iterate
                 return latLongData;
             }, []);
             d.resolve(finalData);
+        }else{
+            d.resolve(finalData);
         }
     }else{
+        console.log("condition not met. so returnin empty result set");
         d.resolve(finalData);
     }
 
