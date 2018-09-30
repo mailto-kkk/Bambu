@@ -234,7 +234,6 @@ suggestionService.computeLatLongSuggestion = function(latitude,longitude,iterate
             d.resolve(finalData);
         }
     }else{
-        console.log("condition not met. so returnin empty result set");
         d.resolve(finalData);
     }
 
