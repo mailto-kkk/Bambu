@@ -24,7 +24,7 @@
         {
             "lowerLimit": 0,
             "upperLimit": 100,
-            "suggestionLevel": 1
+            "suggestionLevel": 0.8
         },
         {
             "lowerLimit": 101,
